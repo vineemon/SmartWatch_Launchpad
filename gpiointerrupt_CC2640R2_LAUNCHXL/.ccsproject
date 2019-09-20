@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?ccsproject version="1.0"?>
+<projectOptions>
+	<ccsVersion value="9.1.0"/>
+	<deviceVariant value="Cortex M.CC2640R2F"/>
+	<deviceFamily value="TMS470"/>
+	<deviceEndianness value="little"/>
+	<codegenToolVersion value="18.12.2.LTS"/>
+	<isElfFormat value="true"/>
+	<connection value="common/targetdb/connections/TIXDS110_Connection.xml"/>
+	<rts value=""/>
+	<createSlaveProjects value=""/>
+	<ignoreDefaultDeviceSettings value="true"/>
+	<ignoreDefaultCCSSettings value="true"/>
+	<templateProperties value="id=gpiointerrupt_CC2640R2_LAUNCHXL_tirtos_ccs.projectspec.gpiointerrupt_CC2640R2_LAUNCHXL_tirtos_ccs,buildProfile=release,isHybrid=true"/>
+	<origin value="/mnt/tirex-content/simplelink_cc2640r2_sdk_3_20_00_21/examples/rtos/CC2640R2_LAUNCHXL/drivers/gpiointerrupt/tirtos/ccs/gpiointerrupt_CC2640R2_LAUNCHXL_tirtos_ccs.projectspec"/>
+	<filesToOpen value=""/>
+</projectOptions>
