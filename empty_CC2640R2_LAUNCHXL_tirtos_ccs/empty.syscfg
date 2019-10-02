@@ -1,0 +1,19 @@
+// These arguments were used when this file was generated. They will be automatically applied on subsequent loads 
+// via the GUI or CLI invocations. Run CLI with '--help' for additional information on how to override these arguments.
+// @cliArgs --device "CC2640R2FRGZ" --package "RGZ" --part "Default"
+// @versions {"data":"2019051709","timestamp":"2019051709","tool":"1.1.792","templates":"2019051709"}
+
+var iGPIO1 = scripting.addPeripheral("GPIO");
+// Assign pin
+iGPIO1["0"].$assign = "DIO_0"; // pin number - 5
+// Name
+iGPIO1.$name = "MyGPIO1";
+var iI2C1 = scripting.addPeripheral("I2C");
+// Name
+iI2C1.$name = "accelerometer";
+// Assign pin
+iI2C1.SDA.$assign = "DIO_5"; // pin number - 10
+// Assign pin
+iI2C1.SCL.$assign = "DIO_4"; // pin number - 9
+// Suggest solution
+iI2C1.$suggestSolution = "I2C0";
