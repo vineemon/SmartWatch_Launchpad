@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?ccsproject version="1.0"?>
+<projectOptions>
+	<ccsVersion value="9.1.0"/>
+	<deviceVariant value="Cortex M.CC2640R2F"/>
+	<deviceFamily value="TMS470"/>
+	<deviceEndianness value="little"/>
+	<codegenToolVersion value="18.12.2.LTS"/>
+	<isElfFormat value="true"/>
+	<connection value="common/targetdb/connections/TIXDS110_Connection.xml"/>
+	<rts value=""/>
+	<createSlaveProjects value=""/>
+	<ignoreDefaultDeviceSettings value="true"/>
+	<ignoreDefaultCCSSettings value="true"/>
+	<templateProperties value="id=spiffsexternal_CC2640R2_LAUNCHXL_nortos_ccs.projectspec.spiffsexternal_CC2640R2_LAUNCHXL_nortos_ccs,buildProfile=release,isHybrid=true"/>
+	<origin value="D:/Temp/spiffsexternal_CC2640R2_LAUNCHXL_nortos_ccs/spiffsexternal_CC2640R2_LAUNCHXL_nortos_ccs"/>
+	<filesToOpen value=""/>
+</projectOptions>
