@@ -176,6 +176,7 @@ Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/
 Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/display/Display.h
 Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/drivers/ADC.h
 Application/accelerometer.obj: C:/ti/ccs910/ccs/tools/compiler/ti-cgt-arm_18.12.2.LTS/include/stdbool.h
+Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/drivers/I2C.h
 Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/blestack/target/Board.h
 Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/blestack/target/./cc2640r2lp/cc2640r2lp_board.h
 Application/accelerometer.obj: C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/blestack/target/./cc2640r2lp/../../boards/CC2640R2_LAUNCHXL/Board.h
@@ -378,6 +379,7 @@ C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/drivers/GPIO.h:
 C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/display/Display.h: 
 C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/drivers/ADC.h: 
 C:/ti/ccs910/ccs/tools/compiler/ti-cgt-arm_18.12.2.LTS/include/stdbool.h: 
+C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/drivers/I2C.h: 
 C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/blestack/target/Board.h: 
 C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/blestack/target/./cc2640r2lp/cc2640r2lp_board.h: 
 C:/ti2/simplelink_cc2640r2_sdk_3_20_00_21/source/ti/blestack/target/./cc2640r2lp/../../boards/CC2640R2_LAUNCHXL/Board.h: 
