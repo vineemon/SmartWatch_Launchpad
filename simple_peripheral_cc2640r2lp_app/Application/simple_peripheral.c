@@ -310,9 +310,11 @@ static void SimplePeripheral_processConnEvt(Gap_ConnEventRpt_t *pReport);
  * EXTERN FUNCTIONS
  */
 extern void AssertHandler(uint8 assertCause, uint8 assertSubcause);
+//uint16_t adc_value_spl;
+extern uint16_t adc_values[4];
+extern uint16_t doctor_threshold;
 extern uint16_t adc_value_spl;
 extern uint16_t adc_value_pitch;
-extern uint16_t doctor_threshold;
 
 /*********************************************************************
  * PROFILE CALLBACKS
@@ -1213,7 +1215,7 @@ static void SimplePeripheral_performPeriodicTask(void)
     SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR4, sizeof(uint8_t),
                                &valueToCopy);
   }
-  MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, &adc_value_spl);
+  MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, adc_values);
 }
 
 /*********************************************************************

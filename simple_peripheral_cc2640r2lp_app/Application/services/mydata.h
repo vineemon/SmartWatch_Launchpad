@@ -60,7 +60,7 @@ extern "C"
 //  Characteristic defines
 #define MYDATA_DATA_ID   0
 #define MYDATA_DATA_UUID 0xAA01
-#define MYDATA_DATA_LEN  4
+#define MYDATA_DATA_LEN  8
 
 /*********************************************************************
  * TYPEDEFS

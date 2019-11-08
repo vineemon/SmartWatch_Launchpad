@@ -31,8 +31,12 @@ uint8_t myTaskStack_pitch[THREADSTACKSIZE];
 
 uint16_t adc_value_spl;
 uint16_t adc_value_pitch;
-uint16_t noise_threshold;
+uint16_t adc_values[4];
+uint16_t noise_threshold = 0;
 uint16_t doctor_threshold;
+uint64_t pitch_count = 0;
+uint64_t pitch_sum = 0;
+bool first;
 
 extern Display_Handle dispHandle;
 Semaphore_Handle adcSem;
@@ -89,17 +93,17 @@ void *myThread_spl(void *arg0) {
     i2cParams.bitRate = I2C_400kHz;
     i2c = I2C_open(Board_I2C_TMP, &i2cParams);
     if (i2c == NULL) {
-        Display_printf(dispHandle, 0, 0, "Error Initializing I2C\n");
+        Display_printf(dispHandle, 10, 0, "Error Initializing I2C\n");
         while (1);
     }
     else {
-        Display_printf(dispHandle, 0, 0, "I2C Initialized!\n");
+        Display_printf(dispHandle, 10, 0, "I2C Initialized!\n");
     }
     /* Common I2C transaction setup */
     i2cTransaction.writeBuf   = txBuffer;
-    i2cTransaction.writeCount = 1;
+    i2cTransaction.writeCount = 2;
     i2cTransaction.readBuf    = rxBuffer;
-    i2cTransaction.readCount  = 2;
+    i2cTransaction.readCount  = 0;
     i2cTransaction.slaveAddress = DRV2065_ADDR;
     GPIO_setConfig(Board_GPIO_BUTTON0, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_FALLING);
 
@@ -110,7 +114,9 @@ void *myThread_spl(void *arg0) {
     GPIO_enableInt(Board_GPIO_BUTTON0);
 
     ADC_Params_init(&params);
+    //ADC_Params_init(&params_pitch);
     adc = ADC_open(Board_ADC0, &params);
+    //adc_pitch = ADC_open(Board_ADC1, &params_pitch);
 
     if (adc == NULL) {
             Display_printf(dispHandle, 6, 0, "Error initializing ADC channel 0\n");
@@ -119,21 +125,21 @@ void *myThread_spl(void *arg0) {
 
     while (1) {
         if (gate == 0) {
-            ADC_convert(adc, &adc_value_spl);
-            Display_printf(dispHandle, 6, 0, "SPL Value: %d\n", adc_value_spl);
+            ADC_convert(adc, &adc_values[0]);
+            Display_printf(dispHandle, 6, 0, "SPL Value: %d\n", adc_values[0]);
             //check if greater than speech threshold
-            if (adc_value_spl > noise_threshold) {
+            if (adc_values[0] > noise_threshold) {
                 //doctor specified thresholds
 
                 //write to memory
 
                 //haptic write
-                txBuffer[0] = MODE;
-                txBuffer[1] = 0x00;
-                I2C_transfer(i2c, &i2cTransaction);
                 txBuffer[0] = GO;
-                txBuffer[1] = 1;
-                I2C_transfer(i2c, &i2cTransaction);
+                txBuffer[1] = 0x01;
+                if(!I2C_transfer(i2c, &i2cTransaction)) {
+                    Display_printf(dispHandle, 12, 0, "Error. No Haptic Driver found!");
+                    while(1);
+                }
             }
         } else {
             /* Pend on semaphore, tmp116Sem */
@@ -142,6 +148,7 @@ void *myThread_spl(void *arg0) {
         }
     }
 }
+
 
 void *myThread_pitch(void *arg0) {
     ADC_Handle   adc;
@@ -153,8 +160,27 @@ void *myThread_pitch(void *arg0) {
     }
     while (1) {
             if (gate == 0) {
-                ADC_convert(adc, &adc_value_pitch);
-                Display_printf(dispHandle, 6, 0, "Pitch value: %d\n", adc_value_pitch);
+                if (adc_values[0] > noise_threshold) {
+                    ADC_convert(adc, &adc_value_pitch);
+                    Display_printf(dispHandle, 7, 0, "Pitch value: %d\n", adc_value_pitch);
+                    pitch_sum+=adc_value_pitch;
+                    pitch_count++;
+                    adc_values[1] = pitch_sum/pitch_count;
+                    if (first) {
+                        adc_values[2] = adc_value_pitch;
+                        adc_values[3] = adc_value_pitch;
+                        first = false;
+                    }
+                    else if (adc_value_pitch < adc_values[2]) {
+                        adc_values[2] = adc_value_pitch;
+                    }
+                   else if (adc_value_pitch > adc_values[3]) {
+                        adc_values[3] = adc_value_pitch;
+                    }
+                    Display_printf(dispHandle, 8, 0, "Average Pitch value: %d\n", adc_values[1]);
+                    Display_printf(dispHandle, 9, 0, "Min Pitch value: %d\n", adc_values[2]);
+                    Display_printf(dispHandle, 10, 0, "Max Pitch value: %d\n", adc_values[3]);
+                }
             } else {
                 /* Pend on semaphore, tmp116Sem */
                 /* Blocking mode conversion */
@@ -179,6 +205,8 @@ void myThread_create(void) {
     taskParams_pitch.stack = myTaskStack_pitch;
     taskParams_pitch.stackSize = THREADSTACKSIZE;
     taskParams_pitch.priority = 1;
+
+    first = true;
 
    Task_construct(&myTask_spl, myThread_spl, &taskParams_spl, Error_IGNORE);
    Task_construct(&myTask_pitch, myThread_pitch, &taskParams_pitch, Error_IGNORE);
