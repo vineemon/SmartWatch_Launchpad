@@ -149,6 +149,7 @@
 #define SBP_PAIRING_STATE_EVT                 0x0004
 #define SBP_PASSCODE_NEEDED_EVT               0x0008
 #define SBP_CONN_EVT                          0x0010
+#define MY_DATA_EVT                           0x0012
 
 // Internal Events for RTOS application
 #define SBP_ICALL_EVT                         ICALL_MSG_EVENT_ID // Event_Id_31
@@ -206,6 +207,7 @@ static Clock_Struct periodicClock;
 static Queue_Struct appMsg;
 static Queue_Handle appMsgQueue;
 
+
 // Task configuration
 Task_Struct sbpTask;
 Char sbpTaskStack[SBP_TASK_STACK_SIZE];
@@ -249,6 +251,16 @@ static uint8_t scanRspData[] =
   GAP_ADTYPE_POWER_LEVEL,
   0       // 0dBm
 };
+
+// Struct for messages from a service
+typedef struct
+{
+  Queue_Elem _elem;
+  uint16_t svcUUID;
+  uint16_t dataLen;
+  uint8_t  paramID;
+  uint8_t  data[]; // Flexible array member, extended to malloc - sizeof(.)
+} char_data_t;
 
 // Advertisement data (max size = 31 bytes, though this is
 // best kept short to conserve power while advertising)
@@ -304,7 +316,25 @@ static uint8_t SimplePeripheral_enqueueMsg(uint8_t event, uint8_t state,
 
 static void SimplePeripheral_connEvtCB(Gap_ConnEventRpt_t *pReport);
 static void SimplePeripheral_processConnEvt(Gap_ConnEventRpt_t *pReport);
+
+// Declaration of service callback handlers
+static void user_myDataValueChangeCB(uint16_t connHandle,
+                                     uint16_t svcUuid,
+                                     uint8_t paramID,
+                                     uint16_t len,
+                                     uint8_t *pValue); // Callback from the service.
+static void user_myData_ValueChangeHandler(sbpEvt_t *pMsg); // Local handler called from the Task context of this task.
 //}
+
+
+
+// Service callback function implementation
+// MyData callback handler. The type myDataCBs_t is defined in myData.h
+static myDataCBs_t user_myDataCBs =
+{
+ .pfnChangeCb = user_myDataValueChangeCB, // Characteristic value change callback handler
+ .pfnCfgChangeCb  = NULL,
+};
 
 /*********************************************************************
  * EXTERN FUNCTIONS
@@ -483,7 +513,7 @@ static void SimplePeripheral_init(void)
   // Create one-shot clocks for internal periodic events.
   Util_constructClock(&periodicClock, SimplePeripheral_clockHandler,
                       SBP_PERIODIC_EVT_PERIOD, 0, false, SBP_PERIODIC_EVT);
-
+  MyData_RegisterAppCBs(&user_myDataCBs);
   dispHandle = Display_open(SBP_DISPLAY_TYPE, NULL);
 
   // Set GAP Parameters: After a connection was established, delay in seconds
@@ -593,7 +623,11 @@ static void SimplePeripheral_init(void)
   GATTServApp_AddService(GATT_ALL_SERVICES);   // GATT Service
   DevInfo_AddService();                        // Device Information Service
   SimpleProfile_AddService(GATT_ALL_SERVICES); // Simple GATT Profile
+
+
+
   MyData_AddService(selfEntity);
+  MyData_RegisterAppCBs(&user_myDataCBs);
 
   // Setup the SimpleProfile Characteristic Values
   // For more information, see the sections in the User's Guide:
@@ -616,8 +650,8 @@ static void SimplePeripheral_init(void)
     SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR5, SIMPLEPROFILE_CHAR5_LEN,
                                charValue5);
     /* Add your new characteristic to the service. These names may vary */
-    uint8_t mydata_initVal[MYDATA_DATA_LEN] = {0};
-    MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, mydata_initVal);
+    uint8_t myData_data_initVal[MYDATA_DATA_LEN] = {0};
+    MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, myData_data_initVal);
   }
 
   // Register callback with SimpleGATTprofile
@@ -680,7 +714,6 @@ static void SimplePeripheral_taskFxn(UArg a0, UArg a1)
     // message is queued to the message receive queue of the thread
     events = Event_pend(syncEvent, Event_Id_NONE, SBP_ALL_EVENTS,
                         ICALL_TIMEOUT_FOREVER);
-
     if (events)
     {
       ICall_EntityID dest;
@@ -737,6 +770,34 @@ static void SimplePeripheral_taskFxn(UArg a0, UArg a1)
     }
   }
 }
+
+void user_myData_ValueChangeHandler(sbpEvt_t *pMsg)
+{
+    switch (pMsg->hdr.state)
+      {
+            case MYDATA_THRESHOLD_ID:
+            {
+            Display_print0(dispHandle, 18, 0, "Value Change msg for myData :: threshold received");
+            MyData_GetParameter( MYDATA_THRESHOLD_ID, &doctor_threshold );
+            // -------------------------
+            break;
+            }
+//            case MYDATA_DATA_ID:
+//            {
+//                Display_print0(dispHandle, 18, 0, "Value Change msg for myData :: data received");
+//                MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, (void*)adc_values);
+//            break;
+//            }
+            default:
+                    break;
+
+          }
+}
+
+static void user_myDataValueChangeCB(uint16_t connHandle, uint16_t svcUuid, uint8_t paramID, uint16_t len, uint8_t *pValue)
+{
+    SimplePeripheral_enqueueMsg(MY_DATA_EVT, paramID, pValue);
+  }
 
 /*********************************************************************
  * @fn      SimplePeripheral_processStackMsg
@@ -952,7 +1013,12 @@ static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg)
         ICall_free(pMsg->pData);
         break;
 	  }
-
+	case MY_DATA_EVT:
+	{
+	   user_myData_ValueChangeHandler(pMsg);
+	   ICall_free(pMsg);
+	   break;
+	 }
     default:
       // Do nothing.
       break;
@@ -1152,6 +1218,7 @@ static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState)
 static void SimplePeripheral_charValueChangeCB(uint8_t paramID)
 {
   SimplePeripheral_enqueueMsg(SBP_CHAR_CHANGE_EVT, paramID, 0);
+  Display_print0(dispHandle, 2, 0, "I wrote a value");
 }
 
 /*********************************************************************
@@ -1167,12 +1234,10 @@ static void SimplePeripheral_charValueChangeCB(uint8_t paramID)
 static void SimplePeripheral_processCharValueChangeEvt(uint8_t paramID)
 {
   uint8_t newValue;
-
   switch(paramID)
   {
     case SIMPLEPROFILE_CHAR1:
-      SimpleProfile_GetParameter(SIMPLEPROFILE_CHAR1, &newValue);
-
+        SimpleProfile_GetParameter(SIMPLEPROFILE_CHAR1, &newValue);
       Display_print1(dispHandle, 4, 0, "Char 1: %d", (uint16_t)newValue);
       break;
 
@@ -1181,7 +1246,6 @@ static void SimplePeripheral_processCharValueChangeEvt(uint8_t paramID)
 
       Display_print1(dispHandle, 4, 0, "Char 3: %d", (uint16_t)newValue);
       break;
-
     default:
       // should not reach here!
       break;
@@ -1204,7 +1268,6 @@ static void SimplePeripheral_processCharValueChangeEvt(uint8_t paramID)
 static void SimplePeripheral_performPeriodicTask(void)
 {
   uint8_t valueToCopy;
-
   // Call to retrieve the value of the third characteristic in the profile
   if (SimpleProfile_GetParameter(SIMPLEPROFILE_CHAR3, &valueToCopy) == SUCCESS)
   {
@@ -1215,7 +1278,7 @@ static void SimplePeripheral_performPeriodicTask(void)
     SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR4, sizeof(uint8_t),
                                &valueToCopy);
   }
-  MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, adc_values);
+  MyData_SetParameter(MYDATA_DATA_ID, MYDATA_DATA_LEN, (void*)adc_values);
 }
 
 /*********************************************************************

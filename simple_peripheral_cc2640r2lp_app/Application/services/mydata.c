@@ -70,6 +70,12 @@ CONST uint8_t myDataUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16(MYDATA_SERV_UUID), HI_UINT16(MYDATA_SERV_UUID)
 };
 
+// threshold UUID
+CONST uint8_t myData_ThresholdUUID[ATT_UUID_SIZE] =
+{
+  TI_BASE_UUID_128(MYDATA_THRESHOLD_UUID)
+};
+
 // data UUID
 CONST uint8_t myData_DataUUID[ATT_UUID_SIZE] =
 {
@@ -89,11 +95,18 @@ static myDataCBs_t *pAppCBs = NULL;
 // Service declaration
 static CONST gattAttrType_t myDataDecl = { ATT_BT_UUID_SIZE, myDataUUID };
 
+// Characteristic "Threshold" Properties (for declaration)
+static uint8_t myData_ThresholdProps = GATT_PROP_WRITE;
+
+// Characteristic "Threshold" Value variable
+static uint8_t myData_ThresholdVal[MYDATA_THRESHOLD_LEN] = {0};
+
 // Characteristic "Data" Properties (for declaration)
 static uint8_t myData_DataProps = GATT_PROP_READ;
 
 // Characteristic "Data" Value variable
 static uint8_t myData_DataVal[MYDATA_DATA_LEN] = {0};
+
 
 /*********************************************************************
 * Profile Attributes - Table
@@ -118,10 +131,24 @@ static gattAttribute_t myDataAttrTbl[] =
       // Data Characteristic Value
       {
         { ATT_UUID_SIZE, myData_DataUUID },
-        GATT_PERMIT_READ,
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
         0,
         myData_DataVal
       },
+      // Threshold Characteristic Declaration
+       {
+         { ATT_BT_UUID_SIZE, characterUUID },
+          GATT_PERMIT_READ,
+          0,
+          &myData_ThresholdProps
+        },
+         // Threshold Characteristic Value
+         {
+           { ATT_UUID_SIZE, myData_ThresholdUUID },
+           GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+            0,
+            myData_ThresholdVal
+         },
 };
 
 /*********************************************************************
@@ -157,8 +184,15 @@ CONST gattServiceCBs_t myDataCBs =
 extern bStatus_t MyData_AddService( uint8_t rspTaskId )
 {
   uint8_t status;
-
-  // Register GATT attribute list and CBs with GATT Server App
+  // Allocate Client Characteristic Configuration table
+//  myData_DataConfig = (gattCharCfg_t *)ICall_malloc( sizeof(gattCharCfg_t) * linkDBNumConns );
+//  if ( myData_DataConfig == NULL )
+//  {
+//    return ( bleMemAllocError );
+//  }
+//  // Initialize Client Characteristic Configuration attributes
+//  GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, myData_DataConfig );
+  // Register GATT attribute list and CBs with GATT Server Application
   status = GATTServApp_RegisterService( myDataAttrTbl,
                                         GATT_NUM_ATTRS( myDataAttrTbl ),
                                         GATT_MAX_ENCRYPT_KEY_SIZE,
@@ -213,6 +247,17 @@ bStatus_t MyData_SetParameter( uint8_t param, uint16_t len, void *value )
       }
       break;
 
+    case MYDATA_THRESHOLD_ID:
+      if ( len == MYDATA_THRESHOLD_LEN )
+      {
+         memcpy(myData_ThresholdVal, value, len);
+       }
+       else
+       {
+         ret = bleInvalidRange;
+       }
+       break;
+
     default:
       ret = INVALIDPARAMETER;
       break;
@@ -230,11 +275,17 @@ bStatus_t MyData_SetParameter( uint8_t param, uint16_t len, void *value )
  *          data type (example: data type of uint16 will be cast to
  *          uint16 pointer).
  */
-bStatus_t MyData_GetParameter( uint8_t param, uint16_t *len, void *value )
+bStatus_t MyData_GetParameter( uint8_t param, void *value )
 {
   bStatus_t ret = SUCCESS;
   switch ( param )
   {
+  case MYDATA_THRESHOLD_ID:
+          memcpy(value, myData_ThresholdVal, MYDATA_THRESHOLD_LEN);
+          break;
+  case MYDATA_DATA_ID:
+      memcpy(value, myData_DataVal, MYDATA_DATA_LEN);
+      break;
     default:
       ret = INVALIDPARAMETER;
       break;
@@ -277,6 +328,18 @@ if ( ! memcmp(pAttr->type.uuid, myData_DataUUID, pAttr->type.len) )
       memcpy(pValue, pAttr->pValue + offset, *pLen);
     }
   }
+else if ( ! memcmp(pAttr->type.uuid, myData_ThresholdUUID, pAttr->type.len) )
+  {
+    if ( offset > MYDATA_THRESHOLD_LEN )  // Prevent malicious ATT ReadBlob offsets.
+    {
+      status = ATT_ERR_INVALID_OFFSET;
+    }
+    else
+    {
+      *pLen = MIN(maxLen, MYDATA_THRESHOLD_LEN - offset);  // Transmit as much as possible
+      memcpy(pValue, pAttr->pValue + offset, *pLen);
+    }
+  }
   else
   {
     // If we get here, that means you've forgotten to add an if clause for a
@@ -316,6 +379,39 @@ static bStatus_t myData_WriteAttrCB( uint16_t connHandle, gattAttribute_t *pAttr
     // Allow only notifications.
     status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
                                              offset, GATT_CLIENT_CFG_NOTIFY);
+    // See if request is regarding the Threshold Characteristic Value
+  }else if ( ! memcmp(pAttr->type.uuid, myData_ThresholdUUID, pAttr->type.len) )
+        {
+          if ( offset + len > MYDATA_THRESHOLD_LEN )
+          {
+            status = ATT_ERR_INVALID_OFFSET;
+          }
+          else
+          {
+            // Copy pValue into the variable we point to from the attribute table.
+            memcpy(pAttr->pValue + offset, pValue, len);
+
+            // Only notify application if entire expected value is written
+            if ( offset + len <= MYDATA_THRESHOLD_LEN)
+              paramID = MYDATA_THRESHOLD_ID;
+          }
+        }
+  else if (! memcmp(pAttr->type.uuid, myData_DataUUID, pAttr->type.len)) {
+      if ( offset + len > MYDATA_DATA_LEN )
+          {
+            status = ATT_ERR_INVALID_OFFSET;
+          }
+          else
+          {
+            // Copy pValue into the variable we point to from the attribute table.
+            memcpy(pAttr->pValue + offset, pValue, len);
+
+            // Only notify application if entire expected value is written
+            //if ( offset + len == MYDATA_DATA_LEN)
+            if (offset + len <= MYDATA_DATA_LEN){
+              paramID = MYDATA_DATA_ID;
+          }
+          }
   }
   else
   {

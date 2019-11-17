@@ -62,6 +62,11 @@ extern "C"
 #define MYDATA_DATA_UUID 0xAA01
 #define MYDATA_DATA_LEN  8
 
+//  Characteristic defines
+#define MYDATA_THRESHOLD_ID   1
+#define MYDATA_THRESHOLD_UUID 0xAA02
+#define MYDATA_THRESHOLD_LEN  8
+
 /*********************************************************************
  * TYPEDEFS
  */
@@ -126,7 +131,7 @@ extern bStatus_t MyData_SetParameter(uint8_t param, uint16_t len, void *value);
  *          data type (example: data type of uint16 will be cast to
  *          uint16 pointer).
  */
-extern bStatus_t MyData_GetParameter(uint8_t param, uint16_t *len, void *value);
+extern bStatus_t MyData_GetParameter(uint8_t param, void *value);
 
 /*********************************************************************
 *********************************************************************/
